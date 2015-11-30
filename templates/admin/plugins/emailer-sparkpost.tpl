@@ -1,11 +1,11 @@
 <div class="row">
 	<div class="col-lg-9">
 		<div class="panel panel-default">
-			<div class="panel-heading">Emailer (Mandrill)</div>
+			<div class="panel-heading">Emailer (SparkPost)</div>
 			<div class="panel-body">
 				<blockquote>
 					<p>
-						Mandrill is a programmable email platform. It allows your application to become a fully featured email server. Send, receive and track messages with ease using your favorite programming language.<br /><br />
+						SparkPost provides all the deliverability, scalability and speed you expect from the world's leading email platform in an easily integrated, pay-as-you-go email delivery service.<br /><br />
 					</p>
 				</blockquote>
 				<p>
@@ -13,16 +13,13 @@
 				</p>
 				<ol>
 					<li>
-						Register for an account on <a href="http://mandrill.com">http://mandrill.com</a>. Mandrill offers a free tier with up to 250 free emails hourly.
-					</li>
-					<li>
-					    Find your key, <a target="_blank" href="http://i.imgur.com/Hf0aCJX.png">screenshot-1</a>, <a target="_blank" href="http://i.imgur.com/edlN37G.png">screenshot-2</a>
+						Register for an account on <a href="http://sparkpost.com">http://sparkpost.com</a>. Sparkpost offers a free tier with up to 10,000 free emails monthly. If you are hosting your app on heroku, SparkPost can be added as an add-on. The API Key is available with each account registered that has to be used while making calls to the SparkPost mailing service.
 					</li>
 					<li>
 						Paste your API key into the field below, hit save, and restart your NodeBB
 					</li>
 				</ol>
-				<form role="form" class="mandrill-settings">
+				<form role="form" class="sparkpost-settings">
 					<fieldset>
 						<div class="row">
 							<div class="col-sm-6">
@@ -40,7 +37,7 @@
 			<div class="panel-heading">Incoming Email Settings</div>
 			<div class="panel-body">
 				<p>
-					This plugin can also be configured to receive emails if configured properly via Mandrill.
+					This plugin can also be configured to receive emails if configured properly via SparkPost.
 				</p>
 				<p>
 					Follow these instructions:
@@ -59,7 +56,7 @@
 					    </ul>
 					</li>
 				</ol>
-				<form role="form" class="mandrill-settings">
+				<form role="form" class="sparkpost-settings">
 					<fieldset>
 						<div class="row">
 							<div class="col-sm-6">
@@ -86,13 +83,13 @@
 
 <script>
 	require(['settings'], function(Settings) {
-		Settings.load('mandrill', $('.mandrill-settings'));
+		Settings.load('sparkpost', $('.sparkpost-settings'));
 
 		$('#save').on('click', function() {
-			Settings.save('mandrill', $('.mandrill-settings'), function() {
+			Settings.save('sparkpost', $('.sparkpost-settings'), function() {
 				app.alert({
 					type: 'success',
-					alert_id: 'mandrill-saved',
+					alert_id: 'sparkpost-saved',
 					title: 'Settings Saved',
 					message: 'Please reload your NodeBB to apply these settings',
 					clickfn: function() {

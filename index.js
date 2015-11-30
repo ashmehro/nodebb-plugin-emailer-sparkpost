@@ -12,7 +12,7 @@ var winston = module.parent.require('winston'),
     Privileges = module.parent.require('./privileges'),
     SocketHelpers = module.parent.require('./socket.io/helpers'),
 
-    mandrill,
+    sparkpost,
     Emailer = {
         settings: {}
     };
@@ -20,27 +20,27 @@ var winston = module.parent.require('winston'),
 Emailer.init = function(data, callback) {
 
     var render = function(req, res) {
-        res.render('admin/plugins/emailer-mandrill', {
+        res.render('admin/plugins/emailer-sparkpost', {
             url: nconf.get('url')
         });
     };
 
-    Meta.settings.get('mandrill', function(err, settings) {
+    Meta.settings.get('sparkpost', function(err, settings) {
         Emailer.settings = Object.freeze(settings);
         Emailer.receiptRegex = new RegExp('^reply-([\\d]+)@' + Emailer.settings.receive_domain + '$');
 
         if (!err && settings && settings.apiKey) {
-            mandrill = require('node-mandrill')(settings.apiKey || 'Replace Me');
+            sparkpost = require('sparkpost')(settings.apiKey || 'Replace Me');
         } else {
-            winston.error('[plugins/emailer-mandrill] API key not set!');
+            winston.error('[plugins/emailer-sparkpost] API key not set!');
         }
 
-        data.router.get('/admin/plugins/emailer-mandrill', data.middleware.admin.buildHeader, render);
-        data.router.get('/api/admin/plugins/emailer-mandrill', render);
-        data.router.head('/emailer-mandrill/reply', function(req, res) {
+        data.router.get('/admin/plugins/emailer-sparkpost', data.middleware.admin.buildHeader, render);
+        data.router.get('/api/admin/plugins/emailer-sparkpost', render);
+        data.router.head('/emailer-sparkpost/reply', function(req, res) {
             res.sendStatus(200);
         });
-        data.router.post('/emailer-mandrill/reply', Emailer.receive);
+        data.router.post('/emailer-sparkpost/reply', Emailer.receive);
 
         if (typeof callback === 'function') {
             callback();
@@ -49,7 +49,7 @@ Emailer.init = function(data, callback) {
 };
 
 Emailer.send = function(data, callback) {
-    if (mandrill) {
+    if (sparkpost) {
         var headers = {};
 
         if (data.pid && Emailer.settings.hasOwnProperty('receive_domain')) {
@@ -84,7 +84,7 @@ Emailer.send = function(data, callback) {
                 })
             },
             function(userData, next) {
-                mandrill('/messages/send', {
+                sparkpost('/messages/send', {
                     message: {
                         to: [{email: data.to, name: data.toName}],
                         subject: data.subject,
@@ -99,15 +99,15 @@ Emailer.send = function(data, callback) {
             }
         ], function (err) {
             if (!err) {
-                winston.verbose('[emailer.mandrill] Sent `' + data.template + '` email to uid ' + data.uid);
+                winston.verbose('[emailer.sparkpost] Sent `' + data.template + '` email to uid ' + data.uid);
             } else {
-                winston.warn('[emailer.mandrill] Unable to send `' + data.template + '` email to uid ' + data.uid + '!!');
-                winston.warn('[emailer.mandrill] Error Stringified:' + JSON.stringify(err));
+                winston.warn('[emailer.sparkpost] Unable to send `' + data.template + '` email to uid ' + data.uid + '!!');
+                winston.warn('[emailer.sparkpost] Error Stringified:' + JSON.stringify(err));
             }
             callback(err, data);
         });
     } else {
-        winston.warn('[plugins/emailer-mandrill] API key not set, not sending email as Mandrill object is not instantiated.');
+        winston.warn('[plugins/emailer-sparkpost] API key not set, not sending email as sparkpost object is not instantiated.');
         callback(new Error('[[error:mandril-api-key-not-set]]'));
     }
 };
@@ -116,13 +116,13 @@ Emailer.receive = function(req, res) {
     var events;
 
     try {
-        events = JSON.parse(req.body.mandrill_events);
+        events = JSON.parse(req.body.sparkpost_events);
     } catch (err) {
-        winston.error('[emailer.mandrill] Error parsing response JSON from Mandrill API "Receive" webhook');
+        winston.error('[emailer.sparkpost] Error parsing response JSON from sparkpost API "Receive" webhook');
         return res.sendStatus(400);
     }
 
-    winston.debug('POST from Mandrill contained ' + events.length + ' items');
+    winston.debug('POST from sparkpost contained ' + events.length + ' items');
 
     async.eachLimit(events, 5, function(eventObj, next) {
         async.waterfall([
@@ -159,12 +159,12 @@ Emailer.verifyEvent = function(eventObj, next) {
                 eventObj.tid = tid;
                 next(null, eventObj);
             } else {
-                if (!tid) { winston.warn('[emailer.mandrill.verifyEvent] Could not retrieve tid'); }
+                if (!tid) { winston.warn('[emailer.sparkpost.verifyEvent] Could not retrieve tid'); }
                 next(new Error('invalid-data'));
             }
         });
     } else {
-        winston.warn('[emailer.mandrill.verifyEvent] Could not locate post id');
+        winston.warn('[emailer.sparkpost.verifyEvent] Could not locate post id');
         next(new Error('invalid-data'));
     }
 };
@@ -199,7 +199,7 @@ Emailer.resolveUserOrGuest = function(eventObj, callback) {
                     callback(null, eventObj);
                 } else {
                     // Guests can't post here
-                    winston.verbose('[emailer.mandrill] Received reply by guest to pid ' + eventObj.pid + ', but guests are not allowed to post here.');
+                    winston.verbose('[emailer.sparkpost] Received reply by guest to pid ' + eventObj.pid + ', but guests are not allowed to post here.');
                     callback(null, false);
                 }
             });
@@ -212,7 +212,7 @@ Emailer.processEvent = function(eventObj, callback) {
         return callback();
     }
 
-    winston.verbose('[emailer.mandrill] Processing incoming email reply by uid ' + eventObj.uid + ' to pid ' + eventObj.pid);
+    winston.verbose('[emailer.sparkpost] Processing incoming email reply by uid ' + eventObj.uid + ' to pid ' + eventObj.pid);
     Topics.reply({
         uid: eventObj.uid,
         toPid: eventObj.pid,
@@ -249,9 +249,9 @@ Emailer.handleError = function(err, eventObj) {
 Emailer.admin = {
     menu: function(custom_header, callback) {
         custom_header.plugins.push({
-            'route': '/plugins/emailer-mandrill',
+            'route': '/plugins/emailer-sparkpost',
             'icon': 'fa-envelope-o',
-            'name': 'Emailer (Mandrill)'
+            'name': 'Emailer (sparkpost)'
         });
 
         callback(null, custom_header);
